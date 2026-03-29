@@ -101,5 +101,19 @@ export function buildMergedGraphData(drugNodes, diseaseNodes) {
     }
   }
 
+  console.log(
+    '[buildGraphData] merged graph:',
+    'drugNodes=',
+    dNodes.length,
+    'diseaseNodes=',
+    eNodes.length,
+    'totalNodes=',
+    nodes.length,
+    'links=',
+    links.length,
+    'crossPairs=',
+    crossPairs.length
+  )
+
   return { nodes, links, crossPairs }
 }
