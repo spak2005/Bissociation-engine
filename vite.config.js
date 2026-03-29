@@ -16,11 +16,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/openai-api/, ''),
       },
-      '/disgenet-api': {
-        target: 'https://www.disgenet.org',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/disgenet-api/, ''),
-      },
     },
   },
 })

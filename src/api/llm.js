@@ -1,7 +1,7 @@
 const OPENAI_URL = '/openai-api/v1/chat/completions'
 const BATCH_SIZE = 8
 
-const SYSTEM_PROMPT_BASE = `You are a biomedical knowledge decomposition engine. Given raw PubChem drug data and disease information, you must decompose BOTH into structured graph nodes.
+const SYSTEM_PROMPT = `You are a biomedical knowledge decomposition engine. Given raw PubChem drug data and a disease name, you must decompose BOTH into structured graph nodes.
 
 For the DRUG, extract 6-10 nodes covering:
 - Mechanisms of action (how the drug works at a molecular level)
@@ -10,14 +10,13 @@ For the DRUG, extract 6-10 nodes covering:
 - Pharmacological actions (therapeutic effects and drug class)
 
 For the DISEASE, generate 6-10 nodes covering:
-- Involved genes (use the DisGeNET gene associations provided when available — pick the highest-scoring, most relevant ones)
+- Involved genes (real gene names like APP, PSEN1, MAPT, etc.)
 - Molecular mechanisms (e.g. protein aggregation, neuroinflammation)
 - Pathways (real signaling pathways involved in pathology)
 - Key symptoms or phenotypes at the molecular/cellular level
 
 CRITICAL RULES:
 - Use REAL gene names, protein names, and pathway names. Do not invent fake biology.
-- When DisGeNET data is provided, you MUST incorporate the top gene associations into your disease nodes. Use their real gene symbols.
 - Every node must reference actual biomedical knowledge.
 - Node IDs: use "d1", "d2", ... for drug nodes and "e1", "e2", ... for disease nodes.
 - Categories must be one of: "mechanism", "target", "pathway", "action", "gene", "symptom"
@@ -37,10 +36,9 @@ Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
  *
  * @param {{ cid: number, name: string, sections: Array<{heading: string, text: string}> }} drugData
  * @param {string} diseaseName
- * @param {Array<{geneName: string, geneId: number, score: number}> | null} diseaseGenes - DisGeNET associations (optional)
  * @returns {Promise<{ drugNodes: Array, diseaseNodes: Array }>}
  */
-export async function decompose(drugData, diseaseName, diseaseGenes = null) {
+export async function decompose(drugData, diseaseName) {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
 
   if (!apiKey) {
@@ -53,25 +51,13 @@ export async function decompose(drugData, diseaseName, diseaseGenes = null) {
     .map((s) => `### ${s.heading}\n${s.text}`)
     .join('\n\n')
 
-  let diseaseBlock = `DISEASE: ${diseaseName}`
-
-  if (diseaseGenes && diseaseGenes.length > 0) {
-    const genesText = diseaseGenes
-      .map((g) => `- ${g.geneName} (Gene ID: ${g.geneId}, association score: ${g.score})`)
-      .join('\n')
-
-    diseaseBlock += `\n\n--- DISGENET GENE-DISEASE ASSOCIATIONS (real data) ---\n${genesText}\n--- END DISGENET DATA ---\n\nUse these real gene associations to ground your disease nodes. Include the top genes as "gene" category nodes.`
-  } else {
-    diseaseBlock += `\n\n(No DisGeNET data available — use your biomedical knowledge to identify real genes and pathways.)`
-  }
-
   const userMessage = `DRUG: ${drugData.name} (PubChem CID ${drugData.cid})
 
 --- RAW PUBCHEM DATA ---
 ${sectionsText}
 --- END DATA ---
 
-${diseaseBlock}
+DISEASE: ${diseaseName}
 
 Decompose both into graph nodes as specified.`
 
@@ -85,7 +71,7 @@ Decompose both into graph nodes as specified.`
       model: 'gpt-4o-mini',
       temperature: 0.4,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT_BASE },
+        { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
     }),
