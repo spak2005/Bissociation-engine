@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { fetchDrugData } from './api/pubchem'
 
 function App() {
   const [drug, setDrug] = useState('')
   const [disease, setDisease] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [drugData, setDrugData] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -12,10 +14,18 @@ function App() {
 
     setLoading(true)
     setError(null)
+    setDrugData(null)
 
-    // TODO: wire up PubChem fetch + decomposition pipeline
-    console.log('Submitting:', { drug: drug.trim(), disease: disease.trim() })
-    setLoading(false)
+    try {
+      const data = await fetchDrugData(drug)
+      setDrugData(data)
+      console.log('PubChem data:', data)
+      console.log('Disease (for LLM later):', disease.trim())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -69,6 +79,19 @@ function App() {
             {loading ? 'Analyzing…' : 'Decompose & Explore'}
           </button>
         </form>
+
+        {drugData && (
+          <div className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-left">
+            <p className="mb-2 text-xs font-medium text-emerald-400">
+              ✓ Fetched data for {drugData.name} (CID {drugData.cid})
+            </p>
+            <p className="text-xs text-zinc-500">
+              {drugData.sections.length} biomedical section
+              {drugData.sections.length !== 1 ? 's' : ''} extracted.
+              Ready for LLM decomposition.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
