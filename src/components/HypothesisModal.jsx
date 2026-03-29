@@ -30,42 +30,48 @@ export default function HypothesisModal({ data, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md transition-opacity duration-300 ease-in-out"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl border border-zinc-800 bg-[#111118] p-6 shadow-2xl"
+        className="glass-panel w-full max-w-lg rounded-2xl p-8 shadow-2xl transition-all duration-300 ease-in-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-sm font-medium text-zinc-300">Hypothesis</h3>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <h3 className="text-2xl font-light tracking-tight text-zinc-100">
+            Hypothesis
+          </h3>
           <button
+            type="button"
             onClick={onClose}
-            className="text-zinc-600 transition hover:text-zinc-300"
+            className="rounded-lg border border-transparent px-2 py-1 text-zinc-500 transition-all duration-300 ease-in-out hover:border-white/10 hover:text-zinc-200"
+            aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        <div className="mb-4 flex gap-3">
-          <span className="rounded-md bg-cyan-950/60 px-2.5 py-1 text-xs font-medium text-cyan-300">
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <span className="rounded-lg border border-cyan-500/25 bg-cyan-950/35 px-3 py-1.5 text-xs font-light text-cyan-200 backdrop-blur-sm">
             {data.drugLabel}
           </span>
-          <span className="text-zinc-600">↔</span>
-          <span className="rounded-md bg-fuchsia-950/60 px-2.5 py-1 text-xs font-medium text-fuchsia-300">
+          <span className="text-base font-light text-zinc-600">↔</span>
+          <span className="rounded-lg border border-fuchsia-500/25 bg-fuchsia-950/35 px-3 py-1.5 text-xs font-light text-fuchsia-200 backdrop-blur-sm">
             {data.diseaseLabel}
           </span>
         </div>
 
-        <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        <p className="mb-6 text-base font-light leading-relaxed text-zinc-300">
           {data.hypothesis}
         </p>
 
-        <div className="flex items-center gap-3">
-          <span className={`rounded-md border px-2.5 py-1 text-xs font-medium ${c.text} ${c.bg} ${c.border}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className={`rounded-lg border px-3 py-1.5 text-xs font-light ${c.text} ${c.bg} ${c.border}`}
+          >
             {confidenceLabel(data.confidence)}
           </span>
-          <span className="text-xs text-zinc-600">
+          <span className="text-xs font-light text-zinc-500">
             Confidence: {data.confidence}/10
           </span>
         </div>
