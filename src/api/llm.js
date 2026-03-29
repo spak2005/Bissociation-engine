@@ -1,4 +1,5 @@
 const OPENAI_URL = '/openai-api/v1/chat/completions'
+const BATCH_SIZE = 8
 
 const SYSTEM_PROMPT = `You are a biomedical knowledge decomposition engine. Given raw PubChem drug data and a disease name, you must decompose BOTH into structured graph nodes.
 
@@ -99,4 +100,82 @@ Decompose both into graph nodes as specified.`
   } catch (e) {
     throw new Error(`Failed to parse LLM JSON: ${e.message}\n\nRaw: ${content.slice(0, 500)}`)
   }
+}
+
+const HYPOTHESIS_SYSTEM_PROMPT = `You are a drug repurposing hypothesis generator. Given pairs of drug properties and disease properties, generate a novel repurposing hypothesis for each pair. Be scientifically grounded. Return ONLY valid JSON (no markdown fences).`
+
+function stripCodeFences(str) {
+  return str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+}
+
+/**
+ * Fire batched LLM calls for hypothesis generation.
+ * Calls onBatchResult(results[]) as each batch resolves,
+ * enabling real-time UI updates.
+ *
+ * @param {Array<{linkId, drugLabel, drugDescription, diseaseLabel, diseaseDescription}>} pairs
+ * @param {(results: Array) => void} onBatchResult
+ */
+export async function generateHypothesesBatched(pairs, onBatchResult) {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+  if (!apiKey) throw new Error('Missing VITE_OPENAI_API_KEY.')
+
+  const batches = []
+  for (let i = 0; i < pairs.length; i += BATCH_SIZE) {
+    batches.push(pairs.slice(i, i + BATCH_SIZE))
+  }
+
+  const promises = batches.map(async (batch) => {
+    const pairsText = batch
+      .map(
+        (p, i) =>
+          `Pair ${i + 1}:\n  Drug property: ${p.drugLabel} — ${p.drugDescription}\n  Disease property: ${p.diseaseLabel} — ${p.diseaseDescription}`
+      )
+      .join('\n\n')
+
+    const userMessage = `Generate a drug repurposing hypothesis for each of these ${batch.length} pairs.\n\n${pairsText}\n\nFor EACH pair return:\n- hypothesis: one paragraph explaining the repurposing connection\n- confidence: integer 1-10 (10 = highly plausible based on known biology)\n\nReturn a JSON array (length ${batch.length}):\n[{ "pairIndex": 0, "hypothesis": "...", "confidence": 5 }, ...]`
+
+    const res = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.5,
+        messages: [
+          { role: 'system', content: HYPOTHESIS_SYSTEM_PROMPT },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+    })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`OpenAI error (${res.status}): ${body}`)
+    }
+
+    const data = await res.json()
+    const raw = data.choices?.[0]?.message?.content
+    if (!raw) throw new Error('Empty hypothesis response.')
+
+    const results = JSON.parse(stripCodeFences(raw))
+
+    const mapped = results.map((r) => {
+      const pair = batch[r.pairIndex ?? results.indexOf(r)]
+      return {
+        linkId: pair.linkId,
+        drugLabel: pair.drugLabel,
+        diseaseLabel: pair.diseaseLabel,
+        hypothesis: r.hypothesis,
+        confidence: Math.max(1, Math.min(10, Math.round(r.confidence))),
+      }
+    })
+
+    onBatchResult(mapped)
+    return mapped
+  })
+
+  await Promise.allSettled(promises)
 }
