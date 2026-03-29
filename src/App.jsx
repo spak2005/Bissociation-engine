@@ -1,12 +1,19 @@
 import { useState } from 'react'
 import { fetchDrugData } from './api/pubchem'
+import { decompose } from './api/llm'
+import SplitView from './components/SplitView'
 
 function App() {
   const [drug, setDrug] = useState('')
   const [disease, setDisease] = useState('')
   const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState('')
   const [error, setError] = useState(null)
-  const [drugData, setDrugData] = useState(null)
+
+  const [screen, setScreen] = useState('input')
+  const [drugNodes, setDrugNodes] = useState([])
+  const [diseaseNodes, setDiseaseNodes] = useState([])
+  const [resolvedDrugName, setResolvedDrugName] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -14,18 +21,45 @@ function App() {
 
     setLoading(true)
     setError(null)
-    setDrugData(null)
+    setStatus('Fetching drug data from PubChem…')
 
     try {
-      const data = await fetchDrugData(drug)
-      setDrugData(data)
-      console.log('PubChem data:', data)
-      console.log('Disease (for LLM later):', disease.trim())
+      const pubchemData = await fetchDrugData(drug)
+      setResolvedDrugName(pubchemData.name)
+
+      setStatus('Decomposing with AI… This may take a few seconds.')
+
+      const { drugNodes: dNodes, diseaseNodes: eNodes } = await decompose(
+        pubchemData,
+        disease.trim()
+      )
+
+      setDrugNodes(dNodes)
+      setDiseaseNodes(eNodes)
+      setScreen('split')
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+      setStatus('')
     }
+  }
+
+  const handleBisociate = () => {
+    // TODO: merge graphs and generate hypotheses (next step)
+    console.log('Begin bisociation — merge step coming next')
+  }
+
+  if (screen === 'split') {
+    return (
+      <SplitView
+        drugNodes={drugNodes}
+        diseaseNodes={diseaseNodes}
+        drugName={resolvedDrugName}
+        diseaseName={disease.trim()}
+        onBisociate={handleBisociate}
+      />
+    )
   }
 
   return (
@@ -48,7 +82,8 @@ function App() {
               value={drug}
               onChange={(e) => setDrug(e.target.value)}
               placeholder="Drug name (e.g. Metformin)"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+              disabled={loading}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-50"
             />
           </div>
 
@@ -58,12 +93,19 @@ function App() {
               value={disease}
               onChange={(e) => setDisease(e.target.value)}
               placeholder="Disease name (e.g. Alzheimer's disease)"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-fuchsia-500/60 focus:ring-1 focus:ring-fuchsia-500/30"
+              disabled={loading}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-fuchsia-500/60 focus:ring-1 focus:ring-fuchsia-500/30 disabled:opacity-50"
             />
           </div>
 
           {error && (
             <p className="text-center text-sm text-red-400">{error}</p>
+          )}
+
+          {status && (
+            <p className="text-center text-sm text-zinc-400 animate-pulse">
+              {status}
+            </p>
           )}
 
           <button
@@ -79,19 +121,6 @@ function App() {
             {loading ? 'Analyzing…' : 'Decompose & Explore'}
           </button>
         </form>
-
-        {drugData && (
-          <div className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-left">
-            <p className="mb-2 text-xs font-medium text-emerald-400">
-              ✓ Fetched data for {drugData.name} (CID {drugData.cid})
-            </p>
-            <p className="text-xs text-zinc-500">
-              {drugData.sections.length} biomedical section
-              {drugData.sections.length !== 1 ? 's' : ''} extracted.
-              Ready for LLM decomposition.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )
