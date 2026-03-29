@@ -119,10 +119,10 @@ export default function BioGraph({
 
   const nodeLabel = useCallback(
     (node) =>
-      `<div style="background:rgba(10,10,15,0.92);padding:6px 10px;border-radius:6px;font-size:12px;max-width:220px;border:1px solid rgba(255,255,255,0.08)">
-        <strong style="color:#f4f4f5">${node.label}</strong>
-        <div style="color:#a1a1aa;margin-top:2px;font-size:11px">${node.category}</div>
-        ${node.description ? `<div style="color:#71717a;margin-top:4px;font-size:10px">${node.description}</div>` : ''}
+      `<div style="background:rgba(6,6,15,0.88);backdrop-filter:blur(12px);padding:10px 14px;border-radius:10px;font-size:15px;font-weight:300;max-width:240px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+        <strong style="color:#fafafa;font-weight:300">${node.label}</strong>
+        <div style="color:#a1a1aa;margin-top:4px;font-size:11px;letter-spacing:0.04em;text-transform:uppercase">${node.category}</div>
+        ${node.description ? `<div style="color:#a1a1aa;margin-top:8px;font-size:14px;font-weight:300;line-height:1.45">${node.description}</div>` : ''}
       </div>`,
     []
   )
