@@ -28,3 +28,26 @@ export async function fetchDrugCid(drugName) {
 
   return cids[0]
 }
+
+/**
+ * Fetch the full PUG View compound data for a given CID.
+ * Returns the raw JSON (Record object) from PubChem.
+ */
+export async function fetchCompoundView(cid) {
+  const url = `${BASE}/rest/pug_view/data/compound/${cid}/JSON`
+
+  const res = await fetch(url)
+
+  if (!res.ok) {
+    throw new Error(`PubChem compound view failed (HTTP ${res.status}).`)
+  }
+
+  const data = await res.json()
+  const record = data?.Record
+
+  if (!record) {
+    throw new Error(`No compound record returned for CID ${cid}.`)
+  }
+
+  return record
+}
