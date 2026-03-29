@@ -118,6 +118,69 @@ function stripCodeFences(str) {
   return str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
 }
 
+function normalizeHypothesisResultsArray(parsed) {
+  if (Array.isArray(parsed)) return parsed
+  if (parsed && Array.isArray(parsed.hypotheses)) return parsed.hypotheses
+  if (parsed && typeof parsed === 'object' && parsed.hypothesis != null) return [parsed]
+  return []
+}
+
+/** 0-based batch slot from LLM pairIndex, or null. Accepts 0-based or 1-based indices. */
+function pairIndexToSlot(pairIndex, batchLength) {
+  if (pairIndex == null || pairIndex === '') return null
+  const n = Math.trunc(Number(pairIndex))
+  if (!Number.isFinite(n)) return null
+  if (n >= 0 && n < batchLength) return n
+  if (n >= 1 && n <= batchLength) return n - 1
+  return null
+}
+
+/**
+ * Map LLM items to batch slots without collapsing duplicate pairIndex onto one link.
+ * Fills unclaimed slots in array order so N outputs yield N distinct linkIds when possible.
+ */
+function mapHypothesisBatch(batch, hypothesisItems) {
+  const len = batch.length
+  const slots = Array.from({ length: len }, () => null)
+  const used = new Set()
+
+  for (const r of hypothesisItems) {
+    const slot = pairIndexToSlot(r.pairIndex ?? r.pair_index, len)
+    if (slot == null) continue
+    if (slots[slot] != null) continue
+    slots[slot] = r
+    used.add(r)
+  }
+
+  for (let i = 0; i < len; i++) {
+    if (slots[i] != null) continue
+    const next = hypothesisItems.find((item) => !used.has(item))
+    if (!next) break
+    slots[i] = next
+    used.add(next)
+  }
+
+  const mapped = []
+  for (let i = 0; i < len; i++) {
+    const r = slots[i]
+    const pair = batch[i]
+    if (!r || pair == null) continue
+    if (r.hypothesis == null || String(r.hypothesis).trim() === '') continue
+
+    mapped.push({
+      linkId: pair.linkId,
+      drugLabel: pair.drugLabel,
+      diseaseLabel: pair.diseaseLabel,
+      hypothesis: r.hypothesis,
+      confidence: Math.max(
+        1,
+        Math.min(10, Math.round(Number(r.confidence) || 5))
+      ),
+    })
+  }
+  return mapped
+}
+
 /**
  * Fire batched LLM calls for hypothesis generation.
  * Calls onBatchResult(results[]) as each batch resolves,
@@ -148,7 +211,7 @@ export async function generateHypothesesBatched(pairs, onBatchResult) {
       )
       .join('\n\n')
 
-    const userMessage = `Generate a drug repurposing hypothesis for each of these ${batch.length} pairs.\n\n${pairsText}\n\nFor EACH pair return:\n- hypothesis: one paragraph explaining the repurposing connection\n- confidence: integer 1-10 (10 = highly plausible based on known biology)\n\nReturn a JSON array (length ${batch.length}):\n[{ "pairIndex": 0, "hypothesis": "...", "confidence": 5 }, ...]`
+    const userMessage = `Generate a drug repurposing hypothesis for each of these ${batch.length} pairs.\n\n${pairsText}\n\nReturn ONLY a JSON array of exactly ${batch.length} objects, in the SAME ORDER as the pairs above (first object = Pair 1, second = Pair 2, etc.).\nEach object must include:\n- pairIndex: integer 0 for Pair 1, 1 for Pair 2, through ${batch.length - 1} for the last pair (each value unique).\n- hypothesis: one paragraph explaining the repurposing connection.\n- confidence: integer 1-10 (10 = highly plausible based on known biology).\n\nExample shape:\n[{ "pairIndex": 0, "hypothesis": "...", "confidence": 5 }, ...]`
 
     const res = await fetch(OPENAI_URL, {
       method: 'POST',
@@ -177,20 +240,30 @@ export async function generateHypothesesBatched(pairs, onBatchResult) {
 
     console.log(`[llm] hypothesis batch ${batchIndex} raw response:`, raw)
 
-    const results = JSON.parse(stripCodeFences(raw))
+    let parsed
+    try {
+      parsed = JSON.parse(stripCodeFences(raw))
+    } catch (parseErr) {
+      console.log(`[llm] hypothesis batch ${batchIndex} JSON parse failed:`, parseErr)
+      throw parseErr
+    }
+
+    const results = normalizeHypothesisResultsArray(parsed)
+    if (results.length === 0 && batch.length > 0) {
+      console.log(
+        `[llm] hypothesis batch ${batchIndex} no hypothesis items after normalize:`,
+        parsed
+      )
+    }
 
     console.log(`[llm] hypothesis batch ${batchIndex} parsed JSON:`, results)
 
-    const mapped = results.map((r) => {
-      const pair = batch[r.pairIndex ?? results.indexOf(r)]
-      return {
-        linkId: pair.linkId,
-        drugLabel: pair.drugLabel,
-        diseaseLabel: pair.diseaseLabel,
-        hypothesis: r.hypothesis,
-        confidence: Math.max(1, Math.min(10, Math.round(r.confidence))),
-      }
-    })
+    const mapped = mapHypothesisBatch(batch, results)
+    if (mapped.length !== batch.length) {
+      console.log(
+        `[llm] hypothesis batch ${batchIndex} mapped count ${mapped.length} !== batch size ${batch.length}`
+      )
+    }
 
     console.log(`[llm] hypothesis batch ${batchIndex} mapped results:`, mapped)
 
