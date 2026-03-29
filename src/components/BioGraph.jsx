@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import ForceGraph3D from 'react-force-graph-3d'
 import * as THREE from 'three'
 
@@ -48,20 +48,44 @@ function getGlowTexture(hex) {
 }
 
 /**
- * A wrapper around ForceGraph3D that renders nodes as glowing
- * bioluminescent spheres with additive-blended sprite halos.
+ * Force-directed 3D graph with glowing bioluminescent nodes.
  *
- * @param {{ graphData: object, accentHue: 'cyan'|'magenta', linkColor?: string }} props
+ * Supports two modes:
+ *  - Single-domain: set accentHue ('cyan' | 'magenta') for uniform palette.
+ *  - Merged: nodes carry their own `color` field; linkColor / linkWidth
+ *    can be functions for per-link styling.
  */
-export default function BioGraph({ graphData, accentHue, linkColor, onNodeClick, ...rest }) {
+export default function BioGraph({
+  graphData,
+  accentHue,
+  linkColor,
+  linkWidth,
+  linkOpacity,
+  onNodeClick,
+  onLinkClick,
+  ...rest
+}) {
   const fgRef = useRef()
 
   const defaultLinkColor = accentHue === 'cyan'
     ? 'rgba(34,211,238,0.12)'
-    : 'rgba(232,121,240,0.12)'
+    : accentHue === 'magenta'
+      ? 'rgba(232,121,240,0.12)'
+      : 'rgba(255,255,255,0.06)'
+
+  const resolvedLinkColor =
+    typeof linkColor === 'function'
+      ? linkColor
+      : () => linkColor || defaultLinkColor
+
+  const resolvedLinkWidth =
+    typeof linkWidth === 'function' ? linkWidth : () => linkWidth ?? 0.4
 
   const nodeThreeObject = useCallback((node) => {
-    const color = CATEGORY_COLORS[node.category] || (accentHue === 'cyan' ? '#22d3ee' : '#e879f0')
+    const color =
+      node.color ||
+      CATEGORY_COLORS[node.category] ||
+      (accentHue === 'cyan' ? '#22d3ee' : '#e879f0')
 
     const group = new THREE.Group()
 
@@ -112,10 +136,11 @@ export default function BioGraph({ graphData, accentHue, linkColor, onNodeClick,
       nodeThreeObject={nodeThreeObject}
       nodeThreeObjectExtend={false}
       nodeLabel={nodeLabel}
-      linkColor={() => linkColor || defaultLinkColor}
-      linkWidth={0.4}
-      linkOpacity={0.3}
+      linkColor={resolvedLinkColor}
+      linkWidth={resolvedLinkWidth}
+      linkOpacity={linkOpacity ?? 0.3}
       onNodeClick={onNodeClick}
+      onLinkClick={onLinkClick}
       {...rest}
     />
   )
