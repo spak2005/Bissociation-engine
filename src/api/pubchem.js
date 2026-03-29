@@ -60,6 +60,9 @@ export async function fetchCompoundView(cid) {
  */
 export async function fetchDrugData(drugName) {
   const cid = await fetchDrugCid(drugName)
+  console.log('[pubchem] fetched CID:', cid, `for "${drugName.trim()}"`)
   const record = await fetchCompoundView(cid)
-  return parseCompoundRecord(record)
+  const summary = parseCompoundRecord(record)
+  console.log('[pubchem] sections count:', summary.sections.length)
+  return summary
 }
