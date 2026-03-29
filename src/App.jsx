@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { fetchDrugData } from './api/pubchem'
+import { fetchDiseaseGenes } from './api/disgenet'
 import { decompose } from './api/llm'
 import SplitView from './components/SplitView'
 import MergedView from './components/MergedView'
@@ -23,17 +24,24 @@ function App() {
 
     setLoading(true)
     setError(null)
-    setStatus('Fetching drug data from PubChem…')
+    setStatus('Fetching drug data from PubChem + disease genes from DisGeNET…')
 
     try {
-      const pubchemData = await fetchDrugData(drug)
-      setResolvedDrugName(pubchemData.name)
+      const [pubchemData, diseaseGenes] = await Promise.all([
+        fetchDrugData(drug),
+        fetchDiseaseGenes(disease.trim()).then((genes) => {
+          if (genes) setStatus('Found DisGeNET gene associations. Decomposing…')
+          return genes
+        }),
+      ])
 
+      setResolvedDrugName(pubchemData.name)
       setStatus('Decomposing with AI… This may take a few seconds.')
 
       const { drugNodes: dNodes, diseaseNodes: eNodes } = await decompose(
         pubchemData,
-        disease.trim()
+        disease.trim(),
+        diseaseGenes
       )
 
       setDrugNodes(dNodes)
