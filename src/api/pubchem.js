@@ -1,3 +1,5 @@
+import { parseCompoundRecord } from './parsePubChem'
+
 const BASE = '/pubchem-api'
 
 /**
@@ -50,4 +52,14 @@ export async function fetchCompoundView(cid) {
   }
 
   return record
+}
+
+/**
+ * Full pipeline: drug name → CID → PUG View → parsed summary.
+ * Returns { cid, name, sections[] } ready for LLM consumption.
+ */
+export async function fetchDrugData(drugName) {
+  const cid = await fetchDrugCid(drugName)
+  const record = await fetchCompoundView(cid)
+  return parseCompoundRecord(record)
 }
