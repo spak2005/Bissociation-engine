@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import BioGraph from './BioGraph'
+import { SplitPanelLabel } from './GraphContextLabels'
 import { buildGraphData } from '../utils/buildGraphData'
 
 /**
@@ -44,15 +45,12 @@ export default function SplitView({
             : 'w-1/2 border-r border-white/[0.06]'
       }`}
     >
-      <div className="pointer-events-none absolute top-4 left-4 z-10 flex items-center gap-2">
-        <span className="rounded-lg border border-cyan-500/20 bg-cyan-950/40 px-3 py-1.5 text-xs font-light text-cyan-200 backdrop-blur-md">
-          {drugName}
-        </span>
-        {expanded === 'drug' && (
-          <span className="rounded-lg border border-white/10 bg-zinc-950/50 px-2.5 py-1 text-xs font-light text-zinc-500 backdrop-blur-md">
-            ESC to exit
-          </span>
-        )}
+      <div className="pointer-events-none absolute left-4 top-4 z-10">
+        <SplitPanelLabel
+          variant="drug"
+          name={drugName}
+          showEsc={expanded === 'drug'}
+        />
       </div>
       <BioGraph graphData={drugGraphData} accentHue="cyan" />
     </div>
@@ -69,15 +67,12 @@ export default function SplitView({
             : 'w-1/2'
       }`}
     >
-      <div className="pointer-events-none absolute top-4 right-4 z-10 flex items-center gap-2">
-        {expanded === 'disease' && (
-          <span className="rounded-lg border border-white/10 bg-zinc-950/50 px-2.5 py-1 text-xs font-light text-zinc-500 backdrop-blur-md">
-            ESC to exit
-          </span>
-        )}
-        <span className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-950/40 px-3 py-1.5 text-xs font-light text-fuchsia-200 backdrop-blur-md">
-          {diseaseName}
-        </span>
+      <div className="pointer-events-none absolute right-4 top-4 z-10">
+        <SplitPanelLabel
+          variant="disease"
+          name={diseaseName}
+          showEsc={expanded === 'disease'}
+        />
       </div>
       <BioGraph graphData={diseaseGraphData} accentHue="magenta" />
     </div>

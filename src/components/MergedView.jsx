@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import BioGraph from './BioGraph'
+import { MergedContextHeader } from './GraphContextLabels'
 import HypothesisModal from './HypothesisModal'
 import { buildMergedGraphData } from '../utils/buildGraphData'
 import { generateHypothesesBatched } from '../api/llm'
@@ -101,16 +102,7 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
         onLinkClick={handleLinkClick}
       />
 
-      {/* Labels */}
-      <div className="pointer-events-none absolute top-4 left-4 z-10 flex items-center gap-2">
-        <span className="rounded-lg border border-cyan-500/20 bg-cyan-950/40 px-3 py-1.5 text-xs font-light text-cyan-200 backdrop-blur-md">
-          {drugName}
-        </span>
-        <span className="text-base font-light text-zinc-600">+</span>
-        <span className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-950/40 px-3 py-1.5 text-xs font-light text-fuchsia-200 backdrop-blur-md">
-          {diseaseName}
-        </span>
-      </div>
+      <MergedContextHeader drugName={drugName} diseaseName={diseaseName} />
 
       {/* Progress */}
       {generating && (
