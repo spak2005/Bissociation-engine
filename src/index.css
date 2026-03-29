@@ -14,3 +14,23 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+.bisociate-btn {
+  box-shadow:
+    0 0 20px rgba(139, 92, 246, 0.25),
+    0 0 60px rgba(139, 92, 246, 0.08);
+  animation: bisociate-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes bisociate-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(139, 92, 246, 0.25),
+      0 0 60px rgba(139, 92, 246, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(139, 92, 246, 0.45),
+      0 0 80px rgba(139, 92, 246, 0.15);
+  }
+}
