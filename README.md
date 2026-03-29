@@ -1,16 +1,64 @@
-# React + Vite
+# Bisociation Engine
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web app that discovers drug-repurposing hypotheses by cross-connecting the molecular properties of a drug with the biological mechanisms of a disease using AI.
 
-Currently, two official plugins are available:
+Enter a drug and a disease. The app decomposes each into a graph of real biomedical entities — mechanisms, protein targets, pathways, genes — then connects every drug node to every disease node and generates a novel repurposing hypothesis at each intersection.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## How it works
 
-## React Compiler
+1. **Input** — Enter a drug name and disease name.
+2. **Data fetch** — Drug data is pulled from the [PubChem](https://pubchem.ncbi.nlm.nih.gov/) PUG REST / PUG View APIs (mechanisms, targets, pharmacology).
+3. **Decomposition** — An LLM (gpt-4o-mini) structures both drug and disease into graph nodes grounded in real biology.
+4. **Split view** — Two interactive 3D force-directed graphs render side-by-side. Click either to expand full-screen.
+5. **Merge** — Both graphs combine into one. Cross-links connect every drug node to every disease node.
+6. **Hypothesis generation** — Batched LLM calls generate a repurposing hypothesis for each cross-link. Links illuminate in real-time: green (strong), yellow (speculative), red (weak). Click any link to inspect the full hypothesis.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech stack
 
-## Expanding the ESLint configuration
+- React (Vite)
+- react-force-graph-3d + Three.js
+- Tailwind CSS v4
+- OpenAI API (gpt-4o-mini)
+- PubChem PUG REST API
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Setup
+
+```bash
+git clone <repo-url>
+cd bissociation_engine
+npm install
+```
+
+Create a `.env` file:
+
+```
+VITE_OPENAI_API_KEY=sk-your-key-here
+```
+
+Run the dev server:
+
+```bash
+npm run dev
+```
+
+## Project structure
+
+```
+src/
+├── api/
+│   ├── llm.js            # LLM decomposition + batched hypothesis generation
+│   ├── pubchem.js         # PubChem name→CID and compound view fetch
+│   └── parsePubChem.js    # PUG View section tree parser
+├── components/
+│   ├── BioGraph.jsx       # 3D force graph with glowing nodes
+│   ├── SplitView.jsx      # Side-by-side drug/disease graphs
+│   ├── MergedView.jsx     # Combined graph + hypothesis generation
+│   └── HypothesisModal.jsx
+├── utils/
+│   └── buildGraphData.js  # Graph data builders (single + merged)
+└── App.jsx                # Screen routing and pipeline orchestration
+```
+
+## License
+
+MIT
