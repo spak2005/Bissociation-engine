@@ -89,12 +89,22 @@ Decompose both into graph nodes as specified.`
     throw new Error('Empty response from OpenAI.')
   }
 
+  console.log('[llm] decompose raw response:', content)
+
   try {
     const parsed = JSON.parse(content)
 
     if (!Array.isArray(parsed.drugNodes) || !Array.isArray(parsed.diseaseNodes)) {
       throw new Error('Missing drugNodes or diseaseNodes arrays.')
     }
+
+    console.log(
+      '[llm] decompose parsed node counts:',
+      'drugNodes=',
+      parsed.drugNodes.length,
+      'diseaseNodes=',
+      parsed.diseaseNodes.length
+    )
 
     return parsed
   } catch (e) {
@@ -125,7 +135,12 @@ export async function generateHypothesesBatched(pairs, onBatchResult) {
     batches.push(pairs.slice(i, i + BATCH_SIZE))
   }
 
-  const promises = batches.map(async (batch) => {
+  const promises = batches.map(async (batch, batchIndex) => {
+    console.log(
+      `[llm] hypothesis batch ${batchIndex + 1}/${batches.length} pairs:`,
+      batch
+    )
+
     const pairsText = batch
       .map(
         (p, i) =>
@@ -160,7 +175,11 @@ export async function generateHypothesesBatched(pairs, onBatchResult) {
     const raw = data.choices?.[0]?.message?.content
     if (!raw) throw new Error('Empty hypothesis response.')
 
+    console.log(`[llm] hypothesis batch ${batchIndex} raw response:`, raw)
+
     const results = JSON.parse(stripCodeFences(raw))
+
+    console.log(`[llm] hypothesis batch ${batchIndex} parsed JSON:`, results)
 
     const mapped = results.map((r) => {
       const pair = batch[r.pairIndex ?? results.indexOf(r)]
@@ -173,9 +192,19 @@ export async function generateHypothesesBatched(pairs, onBatchResult) {
       }
     })
 
+    console.log(`[llm] hypothesis batch ${batchIndex} mapped results:`, mapped)
+
     onBatchResult(mapped)
     return mapped
   })
 
-  await Promise.allSettled(promises)
+  const outcomes = await Promise.allSettled(promises)
+  outcomes.forEach((outcome, i) => {
+    if (outcome.status === 'rejected') {
+      console.log('[llm] hypothesis batch settled rejection', {
+        batchIndex: i,
+        reason: outcome.reason,
+      })
+    }
+  })
 }
