@@ -92,7 +92,7 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
   )
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0a0a0f]">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#06060f]">
       <BioGraph
         graphData={graphData}
         linkColor={linkColor}
@@ -103,11 +103,11 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
 
       {/* Labels */}
       <div className="pointer-events-none absolute top-4 left-4 z-10 flex items-center gap-2">
-        <span className="rounded-md bg-cyan-950/60 px-2.5 py-1 text-xs font-medium text-cyan-300 backdrop-blur-sm">
+        <span className="rounded-lg border border-cyan-500/20 bg-cyan-950/40 px-3 py-1.5 text-xs font-light text-cyan-200 backdrop-blur-md">
           {drugName}
         </span>
-        <span className="text-zinc-700">+</span>
-        <span className="rounded-md bg-fuchsia-950/60 px-2.5 py-1 text-xs font-medium text-fuchsia-300 backdrop-blur-sm">
+        <span className="text-base font-light text-zinc-600">+</span>
+        <span className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-950/40 px-3 py-1.5 text-xs font-light text-fuchsia-200 backdrop-blur-md">
           {diseaseName}
         </span>
       </div>
@@ -115,7 +115,7 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
       {/* Progress */}
       {generating && (
         <div className="absolute top-4 right-4 z-10">
-          <span className="rounded-md bg-zinc-900/80 px-3 py-1.5 text-xs text-zinc-400 backdrop-blur-sm animate-pulse">
+          <span className="rounded-xl border border-white/10 bg-zinc-950/50 px-4 py-2 text-base font-light text-zinc-300 backdrop-blur-xl transition-opacity duration-300 ease-in-out animate-pulse">
             Generating… {progress.completed}/{progress.total}
           </span>
         </div>
@@ -126,7 +126,7 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
         <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
           <button
             onClick={handleGenerate}
-            className="bisociate-btn rounded-full border border-white/10 bg-zinc-900/80 px-6 py-3 text-sm font-medium text-zinc-100 backdrop-blur-md transition-all hover:border-white/25 hover:bg-zinc-800/90 hover:scale-105 active:scale-95"
+            className="bisociate-btn rounded-full border border-white/15 bg-zinc-950/55 px-8 py-3.5 text-base font-light text-zinc-100 backdrop-blur-xl transition-all duration-300 ease-in-out hover:border-fuchsia-400/25 hover:bg-zinc-900/60 hover:shadow-[0_0_40px_rgba(217,70,239,0.12)] hover:scale-[1.02] active:scale-[0.98]"
           >
             Generate Hypotheses
           </button>
@@ -136,7 +136,7 @@ export default function MergedView({ drugNodes, diseaseNodes, drugName, diseaseN
       {/* Summary after completion */}
       {done && !generating && (
         <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
-          <span className="rounded-md bg-zinc-900/80 px-4 py-2 text-xs text-zinc-400 backdrop-blur-sm">
+          <span className="max-w-lg rounded-xl border border-white/10 bg-zinc-950/50 px-5 py-3 text-center text-base font-light leading-relaxed text-zinc-400 backdrop-blur-xl transition-all duration-300 ease-in-out">
             {Object.keys(hypotheses).length} hypotheses generated — click any illuminated link to inspect
           </span>
         </div>
