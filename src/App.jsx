@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { fetchDrugData } from './api/pubchem'
 import { decompose } from './api/llm'
 import SplitView from './components/SplitView'
+import MergedView from './components/MergedView'
 
 function App() {
   const [drug, setDrug] = useState('')
@@ -11,6 +12,7 @@ function App() {
   const [error, setError] = useState(null)
 
   const [screen, setScreen] = useState('input')
+  const [fading, setFading] = useState(false)
   const [drugNodes, setDrugNodes] = useState([])
   const [diseaseNodes, setDiseaseNodes] = useState([])
   const [resolvedDrugName, setResolvedDrugName] = useState('')
@@ -45,20 +47,38 @@ function App() {
     }
   }
 
-  const handleBisociate = () => {
-    // TODO: merge graphs and generate hypotheses (next step)
-    console.log('Begin bisociation — merge step coming next')
+  const handleBisociate = useCallback(() => {
+    setFading(true)
+    setTimeout(() => {
+      setScreen('merged')
+      setFading(false)
+    }, 400)
+  }, [])
+
+  if (screen === 'merged') {
+    return (
+      <div className={`transition-opacity duration-400 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+        <MergedView
+          drugNodes={drugNodes}
+          diseaseNodes={diseaseNodes}
+          drugName={resolvedDrugName}
+          diseaseName={disease.trim()}
+        />
+      </div>
+    )
   }
 
   if (screen === 'split') {
     return (
-      <SplitView
-        drugNodes={drugNodes}
-        diseaseNodes={diseaseNodes}
-        drugName={resolvedDrugName}
-        diseaseName={disease.trim()}
-        onBisociate={handleBisociate}
-      />
+      <div className={`transition-opacity duration-400 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+        <SplitView
+          drugNodes={drugNodes}
+          diseaseNodes={diseaseNodes}
+          drugName={resolvedDrugName}
+          diseaseName={disease.trim()}
+          onBisociate={handleBisociate}
+        />
+      </div>
     )
   }
 
