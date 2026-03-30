@@ -31,14 +31,17 @@ Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
   ]
 }`
 
+const SYSTEM_PROMPT_DISGENET_ADDENDUM = `When DISGENET gene-disease association data appears in the user message under "--- DISGENET GENE-DISEASE ASSOCIATIONS ---", disease nodes MUST prioritize genes supported by that list and stay consistent with the association evidence. You may still add mechanisms, pathways, and phenotypes that cohere with those genes.`
+
 /**
  * Call OpenAI to decompose drug data + disease into structured graph nodes.
  *
  * @param {{ cid: number, name: string, sections: Array<{heading: string, text: string}> }} drugData
  * @param {string} diseaseName
+ * @param {string | null | undefined} [disgenetContext] - Optional DisGeNET summary text for grounded disease nodes
  * @returns {Promise<{ drugNodes: Array, diseaseNodes: Array }>}
  */
-export async function decompose(drugData, diseaseName) {
+export async function decompose(drugData, diseaseName, disgenetContext) {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
 
   if (!apiKey) {
@@ -51,7 +54,7 @@ export async function decompose(drugData, diseaseName) {
     .map((s) => `### ${s.heading}\n${s.text}`)
     .join('\n\n')
 
-  const userMessage = `DRUG: ${drugData.name} (PubChem CID ${drugData.cid})
+  let userMessage = `DRUG: ${drugData.name} (PubChem CID ${drugData.cid})
 
 --- RAW PUBCHEM DATA ---
 ${sectionsText}
@@ -60,6 +63,23 @@ ${sectionsText}
 DISEASE: ${diseaseName}
 
 Decompose both into graph nodes as specified.`
+
+  const disgenetBlock =
+    typeof disgenetContext === 'string' && disgenetContext.trim().length > 0
+      ? disgenetContext.trim()
+      : ''
+
+  if (disgenetBlock) {
+    userMessage += `
+
+--- DISGENET GENE-DISEASE ASSOCIATIONS ---
+${disgenetBlock}
+--- END DISGENET ---`
+  }
+
+  const systemContent = disgenetBlock
+    ? `${SYSTEM_PROMPT}\n\n${SYSTEM_PROMPT_DISGENET_ADDENDUM}`
+    : SYSTEM_PROMPT
 
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
@@ -71,7 +91,7 @@ Decompose both into graph nodes as specified.`
       model: 'gpt-4o-mini',
       temperature: 0.4,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemContent },
         { role: 'user', content: userMessage },
       ],
     }),
