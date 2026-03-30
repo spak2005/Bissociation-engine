@@ -2,6 +2,10 @@
 
 **Engineering creativity through cross-domain pattern matching.**
 
+
+https://github.com/user-attachments/assets/e6a3190d-533f-4bd0-af10-53cbe9ce6da7
+
+
 ![Demo](./demo.gif)
 
 ## The idea
